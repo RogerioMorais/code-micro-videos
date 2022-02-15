@@ -22,4 +22,5 @@ class Genre extends Model
     {
         return $this->belongsToMany(Category::class);
     }
+
 }

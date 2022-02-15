@@ -13,7 +13,8 @@ use Tests\Exceptions\TestException;
 use Tests\TestCase;
 use Tests\Traits\TestSaves;
 use Tests\Traits\TestValidations;
-
+///../vendor/bin/phpunit Unit/
+//../vendor/bin/phpunit Feature/
 class VideoControllerTest extends TestCase
 {
     use DatabaseMigrations, TestValidations, TestSaves;

@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\GenreController;
+use App\Models\Category;
 use App\Models\Genre;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Tests\Exceptions\TestException;
 use Tests\TestCase;
 use Tests\Traits\TestSaves;
 use Tests\Traits\TestValidations;
@@ -40,7 +43,8 @@ class GenreControllerTest extends TestCase
     public function testInvalidationData()
     {
         $data = [
-            'name' => ''
+            'name' => '',
+            'categories_id'=>''
         ];
         $this->assertInvalidationInStoreAction($data, 'required');
         $this->assertInvalidationInUpdateAction($data, 'required');
@@ -56,14 +60,41 @@ class GenreControllerTest extends TestCase
         ];
         $this->assertInvalidationInStoreAction($data, 'boolean');
         $this->assertInvalidationInUpdateAction($data, 'boolean');
+
+        $data = [
+            'categories_id' => 'a'
+        ];
+        $this->assertInvalidationInStoreAction($data, 'array');
+        $this->assertInvalidationInUpdateAction($data, 'array');
+
+        $data = [
+            'categories_id' => [100]
+        ];
+        $this->assertInvalidationInStoreAction($data, 'exists');
+        $this->assertInvalidationInUpdateAction($data, 'exists');
+
+        $category=factory(Category::class)->create();
+        $category->delete();
+        $data = [
+            'categories_id' => [$category->id]
+        ];
+        $this->assertInvalidationInStoreAction($data, 'exists');
+        $this->assertInvalidationInUpdateAction($data, 'exists');
+
     }
 
     public function testStore()
     {
+        $categoryId=factory(Category::class)->create()->id;
+
         $data = [
             'name' => 'test',
         ];
-        $this->assertStore($data, $data + ['is_active' => true, 'deleted_at' => null]);
+        $response=$this->assertStore($data+['categories_id'=>[$categoryId]],
+                           $data + ['is_active' => true, 'deleted_at' => null]);
+
+        $response->assertJsonStructure(['created_at','updated_at']);
+        $this->assetHasCategory($response->json('id'),$categoryId);
 
         $data = [
             'name' => 'test',
@@ -74,14 +105,45 @@ class GenreControllerTest extends TestCase
 
     public function testUpdate()
     {
+        $categoryId=factory(Category::class)->create()->id;
         $data = [
             'name' => 'test',
             'is_active' => true
         ];
-        $response = $this->assertUpdate($data, $data + ['deleted_at' => null]);
+        $response = $this->assertUpdate($data+['categories_id'=>[$categoryId]], $data + ['deleted_at' => null]);
         $response->assertJsonStructure([
             'created_at', 'deleted_at'
         ]);
+    }
+
+    public function testRollbackStore(){
+        $controller=\Mockery::mock(GenreController::class)
+        ->makePartial()
+        ->shouldAllowMockingProtectedMethods();
+        
+        $controller
+        ->shouldReceive('rulesStore')
+        ->withAnyArgs()
+        ->andReturn([]);
+
+        $controller
+        ->shouldReceive('handleRelations')
+        ->once()
+        ->andThrow(new TestException());
+
+        $request=\Mockery::mock(Request::class);
+
+        $hasError=false;
+        try{
+            $controller->store($request);
+        }catch(TestException $e){
+            $this->assertCount(1,Genre::all());
+            $hasError=true;
+        }
+        $this->assertTrue($hasError);
+    }
+    protected function assetHasCategory($genreId,$categoryId){
+        $this->assertDatabaseHas('category_genre',['category_id'=>$categoryId,'genre_id'=>$genreId]);
     }
 
     // public function testDelete()
