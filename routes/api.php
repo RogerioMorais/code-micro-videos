@@ -1,24 +1,18 @@
 <?php
 
-use App\Http\Controllers\CategoryController;
 use Illuminate\Http\Request;
-
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
+use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
-Route::group(['namespace'=>'Api'],function(){
-    Route::resource('categories','CategoryController',['except'=>['create','edit']]);
-    Route::resource('genres','GenreController',['except'=>['create','edit']]);
-});
 
+Route::group(['namespace' => 'Api'], function () {
+    $exceptCreateEdit = [
+        'except' => ['create', 'edit']
+    ];
+    Route::resource('categories', 'CategoryController', $exceptCreateEdit);
+    Route::resource('genres', 'GenreController', $exceptCreateEdit);
+    Route::resource('cast_members', 'CastMemberController', $exceptCreateEdit);
+    Route::resource('videos', 'VideoController', $exceptCreateEdit);
+});
