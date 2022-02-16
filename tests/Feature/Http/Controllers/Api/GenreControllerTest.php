@@ -10,7 +10,9 @@ use Tests\Exceptions\TestException;
 use Tests\TestCase;
 use Tests\Traits\TestSaves;
 use Tests\Traits\TestValidations;
-
+use Illuminate\Http\Request;
+use Mockery;
+//../vendor/bin/phpunit Feature/Http/Controllers/Api/GenreControllerTest.php;
 class GenreControllerTest extends TestCase
 {
     use DatabaseMigrations;
@@ -100,7 +102,7 @@ class GenreControllerTest extends TestCase
             'name' => 'test',
             'is_active' => false
         ];
-        $this->assertStore($data, $data + ['is_active' => false, 'deleted_at' => null]);
+        $this->assertStore($data+['categories_id'=>[$categoryId]], $data + ['is_active' => false, 'deleted_at' => null]);
     }
 
     public function testUpdate()
@@ -117,10 +119,15 @@ class GenreControllerTest extends TestCase
     }
 
     public function testRollbackStore(){
-        $controller=\Mockery::mock(GenreController::class)
+        $controller=Mockery::mock(GenreController::class)
         ->makePartial()
         ->shouldAllowMockingProtectedMethods();
-        
+
+        $controller
+        ->shouldReceive('validate')
+        ->withAnyArgs()
+        ->andReturn(['name'=>'test']);
+
         $controller
         ->shouldReceive('rulesStore')
         ->withAnyArgs()
@@ -131,11 +138,47 @@ class GenreControllerTest extends TestCase
         ->once()
         ->andThrow(new TestException());
 
-        $request=\Mockery::mock(Request::class);
+        $request=Mockery::mock(Request::class);
 
         $hasError=false;
         try{
             $controller->store($request);
+        }catch(TestException $e){
+            $this->assertCount(1,Genre::all());
+            $hasError=true;
+        }
+        $this->assertTrue($hasError);
+    }
+    public function testRollbackUpdate(){
+        $controller=Mockery::mock(GenreController::class)
+        ->makePartial()
+        ->shouldAllowMockingProtectedMethods();
+        
+        $controller
+            ->shouldReceive('findOrFail')
+            ->withAnyArgs()
+            ->andReturn($this->genre);
+
+        $controller
+            ->shouldReceive('validate')
+            ->withAnyArgs()
+            ->andReturn(['name'=>'test']);
+
+        $controller
+        ->shouldReceive('rulesUpdate')
+        ->withAnyArgs()
+        ->andReturn([]);
+
+        $controller
+        ->shouldReceive('handleRelations')
+        ->once()
+        ->andThrow(new TestException());
+         
+        $request=Mockery::mock(Request::class);
+
+        $hasError=false;
+        try{
+            $controller->update($request,1);
         }catch(TestException $e){
             $this->assertCount(1,Genre::all());
             $hasError=true;

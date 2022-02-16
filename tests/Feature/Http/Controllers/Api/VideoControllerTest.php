@@ -14,7 +14,7 @@ use Tests\TestCase;
 use Tests\Traits\TestSaves;
 use Tests\Traits\TestValidations;
 ///../vendor/bin/phpunit Unit/
-//../vendor/bin/phpunit Feature/
+//../vendor/bin/phpunit Feature/Http/Controllers/Api/VideoControllerTest.php;
 class VideoControllerTest extends TestCase
 {
     use DatabaseMigrations, TestValidations, TestSaves;
@@ -136,6 +136,14 @@ class VideoControllerTest extends TestCase
         ];
         $this->assertInvalidationInStoreAction($data, 'exists');
         $this->assertInvalidationInUpdateAction($data, 'exists');
+
+        $genre=factory(Genre::class)->create();
+        $genre->delete();
+        $data =[
+            'genres_id'=>[$genre->id]
+        ];
+        $this->assertInvalidationInStoreAction($data,'exists');
+        $this->assertInvalidationInUpdateAction($data,'exists');
     }
 
     public function testStore()
