@@ -2,14 +2,11 @@
 
 namespace Tests\Feature\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\VideoController;
 use App\Models\Category;
 use App\Models\Genre;
 use App\Models\Video;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Http\Request;
-use Mockery;
-use Tests\Exceptions\TestException;
 use Tests\TestCase;
 use Tests\Traits\TestSaves;
 use Tests\Traits\TestValidations;
@@ -30,6 +27,7 @@ class VideoControllerTest extends TestCase
         $this->video = factory(Video::class)->create();
         $this->category = factory(Category::class)->create();
         $this->genre = factory(Genre::class)->create();
+        $this->genre->categories()->attach([$this->category->id]);
         $this->sendData = [
             'title' => 'title test',
             'description' => 'description test',
@@ -176,43 +174,6 @@ class VideoControllerTest extends TestCase
             'created_at',
             'deleted_at'
         ]);
-    }
-
-    public function testRollbackStore()
-    {
-        $controller = $this->mockControllerTestRollback('rulesStore');
-
-        $request = Mockery::mock(Request::class);
-
-        try {
-            $controller->store($request);
-        } catch (TestException $e) {
-            $this->assertCount(1, Video::all());
-        }
-    }
-
-    protected function mockControllerTestRollback($validationRules)
-    {
-        $controller = Mockery::mock(VideoController::class)
-            ->makePartial()
-            ->shouldAllowMockingProtectedMethods();
-
-        $controller
-            ->shouldReceive('validate')
-            ->withAnyArgs()
-            ->andReturn($this->sendData);
-
-        $controller
-            ->shouldReceive($validationRules)
-            ->withAnyArgs()
-            ->andReturn([]);
-
-        $controller
-            ->shouldReceive('handleRelations')
-            ->once()
-            ->andThrow(new TestException());
-
-        return $controller;
     }
 
     public function testShow()
